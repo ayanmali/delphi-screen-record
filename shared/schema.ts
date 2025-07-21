@@ -19,7 +19,13 @@ export const insertRecordingSchema = createInsertSchema(recordings).omit({
   createdAt: true,
 });
 
+// Client-side metadata schema (excludes fileSize since it's determined server-side)
+export const clientMetadataSchema = insertRecordingSchema.omit({
+  fileSize: true,
+});
+
 export type InsertRecording = z.infer<typeof insertRecordingSchema>;
+export type ClientMetadata = z.infer<typeof clientMetadataSchema>;
 export type Recording = typeof recordings.$inferSelect;
 
 // Recording options schema

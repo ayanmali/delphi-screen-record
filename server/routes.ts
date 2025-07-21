@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertRecordingSchema, recordingOptionsSchema } from "@shared/schema";
+import { insertRecordingSchema, clientMetadataSchema, recordingOptionsSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 
@@ -46,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const recordingData = JSON.parse(req.body.metadata);
-      const validatedData = insertRecordingSchema.parse(recordingData);
+      const validatedData = clientMetadataSchema.parse(recordingData);
 
       // Generate unique filename
       const timestamp = Date.now();
