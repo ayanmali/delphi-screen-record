@@ -2,7 +2,7 @@ from app.data.database import Base
 from sqlalchemy import Column, DateTime, Integer, String, func
 
 # Entity stored in database
-class UserDBModel(Base):
+class User(Base):
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True, index=True)

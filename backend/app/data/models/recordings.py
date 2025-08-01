@@ -2,7 +2,7 @@
 from typing import Literal
 from pydantic import BaseModel
 
-class RecordingBase(BaseModel):
+class RecordingBaseDto(BaseModel):
     title: str
     filename: str
     fileSize: int
@@ -11,13 +11,13 @@ class RecordingBase(BaseModel):
     hasAudio: bool
     thumbnailUrl: str | None
 
-class InsertRecording(RecordingBase):
+class InsertRecordingDto(RecordingBaseDto):
     pass
 
-class ClientMetadata(RecordingBase):
+class ClientMetadataDto(RecordingBaseDto):
     pass
 
-class RecordingOptions(BaseModel):
+class RecordingOptionsDto(BaseModel):
     screenSource: Literal["entire", "window", "tab"]
     includeMicrophone: bool
     includeSystemAudio: bool
