@@ -77,7 +77,7 @@ export default function Sidebar() {
             <Video className="text-white h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">ScreenCast Pro</h1>
+            <h1 className="text-xl font-bold text-gray-900">Delphi</h1>
             <p className="text-xs text-gray-500">v2.1.0</p>
           </div>
         </div>
