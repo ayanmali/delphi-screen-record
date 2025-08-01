@@ -1,12 +1,19 @@
 import logging
 import sys
 from contextlib import asynccontextmanager
-
+from dotenv import load_dotenv
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.routes.users import users_router
+from app.routes.recordings import recordings_router
 from app.data.database import session_manager
+import os
+
+load_dotenv()
+
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS").split(",")
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
@@ -28,6 +35,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, title="Delphi Candidate Screen Recording Service", docs_url="/docs")
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ALLOWED_ORIGINS,  # Frontend URLs
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def root():
@@ -36,6 +51,7 @@ async def root():
 
 # Routers
 app.include_router(users_router)
+app.include_router(recordings_router)
 
 
 if __name__ == "__main__":

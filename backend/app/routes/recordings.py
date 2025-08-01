@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from app.data.schemas.recordings import Recording
-from app.data.models.recordings import InsertRecordingDto, ClientMetadataDto
+from app.data.models.recordings import InsertRecordingDto, ClientMetadataDto, RecordingResponseDto
 from app.repositories.recordings_repository import (
     create_recording,
     get_recording,
@@ -15,13 +15,14 @@ from app.repositories.recordings_repository import (
     get_recordings_count
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated, Optional
+from typing import Annotated, Optional, List
 from app.data.database import session_manager
+from app.dependencies import DBSessionDep
 import json
 import os
 from datetime import datetime
 
-SessionDep = Annotated[AsyncSession, Depends(session_manager.session)]
+SessionDep = DBSessionDep
 
 recordings_router = APIRouter(
     prefix="/api/recordings",
@@ -30,7 +31,7 @@ recordings_router = APIRouter(
 )
 
 # Get all recordings
-@recordings_router.get("/", response_model=list[Recording])
+@recordings_router.get("/", response_model=List[RecordingResponseDto])
 async def get_recordings(
     skip: int = 0,
     limit: int = 100,
@@ -55,7 +56,7 @@ async def get_recordings(
         raise HTTPException(status_code=500, detail="Failed to fetch recordings")
 
 # Get specific recording
-@recordings_router.get("/{recording_id}", response_model=Recording)
+@recordings_router.get("/{recording_id}", response_model=RecordingResponseDto)
 async def get_recording_by_id(recording_id: int, session: SessionDep = None):
     """
     Get a specific recording by ID
@@ -68,7 +69,7 @@ async def get_recording_by_id(recording_id: int, session: SessionDep = None):
         raise HTTPException(status_code=500, detail="Failed to fetch recording")
 
 # Create new recording
-@recordings_router.post("/", response_model=Recording)
+@recordings_router.post("/", response_model=RecordingResponseDto)
 async def create_new_recording(
     video: UploadFile = File(...),
     metadata: str = Form(...),
@@ -176,7 +177,7 @@ async def stream_recording(recording_id: int, session: SessionDep = None):
         raise HTTPException(status_code=500, detail="Failed to stream recording")
 
 # Update recording
-@recordings_router.put("/{recording_id}", response_model=Recording)
+@recordings_router.put("/{recording_id}", response_model=RecordingResponseDto)
 async def update_recording_by_id(
     recording_id: int,
     recording_data: dict,

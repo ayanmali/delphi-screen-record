@@ -1,15 +1,15 @@
 from app.data.database import Base
-from sqlmodel import Field
-from datetime import datetime
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, func
 
 class Recording(Base):
     __tablename__ = "recordings"
-    id: int = Field(primary_key=True)
-    title: str = Field(index=True)
-    filename: str = Field(index=True)
-    fileSize: int = Field(index=True)
-    duration: int = Field(index=True)
-    format: str = Field(index=True) # e.g. "mp4", "webm"
-    createdAt: datetime = Field(index=True)
-    hasAudio: bool = Field(index=True)
-    thumbnailUrl: str | None = Field(index=True)
+    
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    filename = Column(String, index=True)
+    fileSize = Column(Integer, index=True)
+    duration = Column(Integer, index=True)
+    format = Column(String, index=True)
+    createdAt = Column(DateTime, default=func.now())
+    hasAudio = Column(Boolean, index=True)
+    thumbnailUrl = Column(String, index=True)
