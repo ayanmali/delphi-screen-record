@@ -33,12 +33,12 @@ recordings_router = APIRouter(
 # Get all recordings
 @recordings_router.get("/", response_model=List[RecordingResponseDto])
 async def get_recordings(
+    session: SessionDep,
     skip: int = 0,
     limit: int = 100,
     format: Optional[str] = None,
     has_audio: Optional[bool] = None,
-    search: Optional[str] = None,
-    session: SessionDep = None
+    search: Optional[str] = None
 ):
     """
     Get all recordings with optional filtering and pagination
@@ -57,7 +57,7 @@ async def get_recordings(
 
 # Get specific recording
 @recordings_router.get("/{recording_id}", response_model=RecordingResponseDto)
-async def get_recording_by_id(recording_id: int, session: SessionDep = None):
+async def get_recording_by_id(session: SessionDep, recording_id: int):
     """
     Get a specific recording by ID
     """
@@ -71,9 +71,9 @@ async def get_recording_by_id(recording_id: int, session: SessionDep = None):
 # Create new recording
 @recordings_router.post("/", response_model=RecordingResponseDto)
 async def create_new_recording(
+    session: SessionDep,
     video: UploadFile = File(...),
-    metadata: str = Form(...),
-    session: SessionDep = None
+    metadata: str = Form(...)
 ):
     """
     Create a new recording with video file upload
@@ -123,7 +123,7 @@ async def create_new_recording(
 
 # Download recording file
 @recordings_router.get("/{recording_id}/download")
-async def download_recording(recording_id: int, session: SessionDep = None):
+async def download_recording(session: SessionDep, recording_id: int):
     """
     Download a recording file
     """
@@ -151,7 +151,7 @@ async def download_recording(recording_id: int, session: SessionDep = None):
 
 # Stream recording file
 @recordings_router.get("/{recording_id}/stream")
-async def stream_recording(recording_id: int, session: SessionDep = None):
+async def stream_recording(session: SessionDep, recording_id: int):
     """
     Stream a recording file
     """
@@ -179,9 +179,9 @@ async def stream_recording(recording_id: int, session: SessionDep = None):
 # Update recording
 @recordings_router.put("/{recording_id}", response_model=RecordingResponseDto)
 async def update_recording_by_id(
+    session: SessionDep,
     recording_id: int,
-    recording_data: dict,
-    session: SessionDep = None
+    recording_data: dict
 ):
     """
     Update a recording by ID
@@ -195,7 +195,7 @@ async def update_recording_by_id(
 
 # Delete recording
 @recordings_router.delete("/{recording_id}")
-async def delete_recording_by_id(recording_id: int, session: SessionDep = None):
+async def delete_recording_by_id(session: SessionDep, recording_id: int):
     """
     Delete a recording by ID
     """
@@ -217,7 +217,7 @@ async def delete_recording_by_id(recording_id: int, session: SessionDep = None):
 
 # Get storage statistics
 @recordings_router.get("/storage/stats")
-async def get_storage_stats(session: SessionDep = None):
+async def get_storage_stats(session: SessionDep):
     """
     Get storage statistics
     """
