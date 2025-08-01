@@ -8,9 +8,17 @@ import { cn } from "@/lib/utils";
 import type { Recording } from "@shared/schema";
 
 interface StorageStats {
-  used: number;
-  total: number;
+  totalSize: number;
+  totalRecordings: number;
+  formats: {
+    mp4: number;
+    webm: number;
+  };
+  withAudio: number;
+  withoutAudio: number;
 }
+
+const MAX_STORAGE_SIZE = 1024 * 1024 * 1024 * 10; // 10GB
 
 export default function Sidebar() {
   const [location] = useLocation();
@@ -20,7 +28,7 @@ export default function Sidebar() {
   });
 
   const { data: storageStats } = useQuery<StorageStats>({
-    queryKey: ["/api/storage/stats"],
+    queryKey: ["/api/recordings/storage/stats"],
   });
 
   const formatStorageSize = (bytes: number) => {
@@ -33,11 +41,11 @@ export default function Sidebar() {
       unitIndex++;
     }
     
-    return `${size.toFixed(1)} ${units[unitIndex]}`;
+    return `${size} ${units[unitIndex]}`;
   };
 
   const storagePercentage = storageStats 
-    ? Math.round((storageStats.used / storageStats.total) * 100)
+    ? Math.round((storageStats.totalSize / MAX_STORAGE_SIZE) * 100)
     : 0;
 
   const navigationItems = [
@@ -117,7 +125,7 @@ export default function Sidebar() {
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">Storage Used</span>
               <span className="text-sm text-gray-500">
-                {storageStats ? formatStorageSize(storageStats.used) : "0 B"}
+                {storageStats ? formatStorageSize(storageStats.totalSize) : "0 B"}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
@@ -128,7 +136,7 @@ export default function Sidebar() {
             </div>
             <p className="text-xs text-gray-500 mt-1">
               {storageStats 
-                ? `${formatStorageSize(storageStats.total - storageStats.used)} remaining`
+                ? `${formatStorageSize(MAX_STORAGE_SIZE - storageStats.totalSize)} remaining`
                 : "Loading..."
               }
             </p>

@@ -27,25 +27,20 @@ export function useScreenRecording(options: RecordingOptions) {
       formData.append("metadata", JSON.stringify({
         title,
         filename,
+        fileSize: blob.size,
         duration,
         format: options.format,
         hasAudio: options.includeMicrophone || options.includeSystemAudio,
+        thumbnailUrl: null,
       }));
 
-      const response = await fetch("/api/recordings", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save recording");
-      }
-
+      // Use apiRequest for proper URL handling
+      const response = await apiRequest("POST", "/api/recordings", formData);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/recordings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/storage/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/recordings/storage/stats"] });
       toast({
         title: "Recording saved",
         description: "Your screen recording has been saved successfully.",
