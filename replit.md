@@ -4,7 +4,7 @@
 
 This is a full-stack screen recording application built with React, TypeScript, Express.js, and Drizzle ORM. The application allows users to record their screen, manage recordings, and provides a clean interface for viewing and organizing recorded content. It follows a modern monorepo structure with shared schemas and clear separation between client and server code.
 
-## User Preferences
+## Candidate Preferences
 
 Preferred communication style: Simple, everyday language.
 
@@ -72,7 +72,7 @@ The application uses a single `recordings` table with the following structure:
 ## Data Flow
 
 1. **Recording Process**:
-   - User configures recording options
+   - Candidate configures recording options
    - Browser requests screen capture permissions
    - MediaRecorder API captures screen/audio
    - Recording data is accumulated in chunks
@@ -86,7 +86,7 @@ The application uses a single `recordings` table with the following structure:
 
 3. **Playback & Management**:
    - Client fetches recordings list from API
-   - Users can preview, download, or delete recordings
+   - Candidates can preview, download, or delete recordings
    - Storage statistics are displayed in sidebar
 
 ## External Dependencies

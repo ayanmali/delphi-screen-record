@@ -68,7 +68,7 @@ export default function VideoPreviewModal({ recording, onClose }: VideoPreviewMo
           url: window.location.href,
         });
       } catch (error) {
-        // User cancelled sharing
+        // Candidate cancelled sharing
       }
     } else {
       // Fallback: copy URL to clipboard

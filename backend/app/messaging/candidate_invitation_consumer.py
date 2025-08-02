@@ -1,0 +1,195 @@
+import json
+import logging
+from datetime import datetime
+from typing import Optional
+
+import pika
+from pydantic import BaseModel
+
+from app.data.database import get_db_session
+from app.data.models.assessments import Assessment
+from app.data.models.users import User
+
+logger = logging.getLogger(__name__)
+
+
+class CandidateInvitationMessage(BaseModel):
+    assessment_id: int
+    assessment_name: str
+    assessment_description: Optional[str]
+    assessment_type: str
+    assessment_start_date: Optional[str]
+    assessment_end_date: Optional[str]
+    assessment_duration: Optional[int]
+    candidate: dict
+    user_id: int
+    user_email: str
+    invitation_date: str
+    invitation_id: str
+
+
+class CandidateInvitationConsumer:
+    def __init__(self, rabbitmq_url: str = "amqp://localhost:5672"):
+        self.rabbitmq_url = rabbitmq_url
+        self.connection = None
+        self.channel = None
+        self.exchange_name = "candidate.invitation.topic"
+        self.queue_name = "candidate.invitation.queue"
+        self.routing_key = "topic.candidate.invitation"
+
+    def connect(self):
+        """Establish connection to RabbitMQ"""
+        try:
+            self.connection = pika.BlockingConnection(
+                pika.URLParameters(self.rabbitmq_url)
+            )
+            self.channel = self.connection.channel()
+            
+            # Declare exchange and queue
+            self.channel.exchange_declare(
+                exchange=self.exchange_name,
+                exchange_type='topic',
+                durable=True
+            )
+            
+            self.channel.queue_declare(
+                queue=self.queue_name,
+                durable=True
+            )
+            
+            self.channel.queue_bind(
+                exchange=self.exchange_name,
+                queue=self.queue_name,
+                routing_key=self.routing_key
+            )
+            
+            logger.info(f"Connected to RabbitMQ and bound to queue: {self.queue_name}")
+            
+        except Exception as e:
+            logger.error(f"Failed to connect to RabbitMQ: {e}")
+            raise
+
+    def process_message(self, ch, method, properties, body):
+        """Process incoming candidate invitation message"""
+        try:
+            # Parse the message
+            message_data = json.loads(body.decode('utf-8'))
+            message = CandidateInvitationMessage(**message_data)
+            
+            logger.info(f"Processing candidate invitation for assessment: {message.assessment_name}")
+            
+            # Update database
+            self.update_database(message)
+            
+            # Acknowledge the message
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            
+            logger.info(f"Successfully processed candidate invitation: {message.invitation_id}")
+            
+        except Exception as e:
+            logger.error(f"Error processing candidate invitation message: {e}")
+            # Reject the message and requeue it
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+
+    def update_database(self, message: CandidateInvitationMessage):
+        """Update the database with the candidate invitation information"""
+        try:
+            with get_db_session() as session:
+                # Check if assessment exists, if not create it
+                assessment = session.query(Assessment).filter(
+                    Assessment.id == message.assessment_id
+                ).first()
+                
+                if not assessment:
+                    # Create new assessment
+                    assessment = Assessment(
+                        id=message.assessment_id,
+                        name=message.assessment_name,
+                        description=message.assessment_description,
+                        assessment_type=message.assessment_type,
+                        start_date=datetime.fromisoformat(message.assessment_start_date) if message.assessment_start_date else None,
+                        end_date=datetime.fromisoformat(message.assessment_end_date) if message.assessment_end_date else None,
+                        duration=message.assessment_duration,
+                        user_id=message.user_id,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    session.add(assessment)
+                    logger.info(f"Created new assessment: {message.assessment_name}")
+                else:
+                    # Update existing assessment
+                    assessment.name = message.assessment_name
+                    assessment.description = message.assessment_description
+                    assessment.assessment_type = message.assessment_type
+                    assessment.start_date = datetime.fromisoformat(message.assessment_start_date) if message.assessment_start_date else None
+                    assessment.end_date = datetime.fromisoformat(message.assessment_end_date) if message.assessment_end_date else None
+                    assessment.duration = message.assessment_duration
+                    assessment.updated_at = datetime.utcnow()
+                    logger.info(f"Updated existing assessment: {message.assessment_name}")
+
+                # Check if user exists, if not create it
+                user = session.query(User).filter(User.id == message.user_id).first()
+                if not user:
+                    user = User(
+                        id=message.user_id,
+                        email=message.user_email,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow()
+                    )
+                    session.add(user)
+                    logger.info(f"Created new user: {message.user_email}")
+
+                session.commit()
+                logger.info(f"Database updated successfully for invitation: {message.invitation_id}")
+                
+        except Exception as e:
+            logger.error(f"Error updating database: {e}")
+            raise
+
+    def start_consuming(self):
+        """Start consuming messages from the queue"""
+        try:
+            # Set up consumer
+            self.channel.basic_qos(prefetch_count=1)
+            self.channel.basic_consume(
+                queue=self.queue_name,
+                on_message_callback=self.process_message
+            )
+            
+            logger.info("Starting to consume candidate invitation messages...")
+            self.channel.start_consuming()
+            
+        except KeyboardInterrupt:
+            logger.info("Stopping consumer...")
+            self.stop()
+        except Exception as e:
+            logger.error(f"Error in consumer: {e}")
+            self.stop()
+
+    def stop(self):
+        """Stop the consumer and close connections"""
+        if self.channel:
+            self.channel.stop_consuming()
+        if self.connection:
+            self.connection.close()
+        logger.info("Consumer stopped")
+
+
+def main():
+    """Main function to run the consumer"""
+    import os
+    
+    # Get RabbitMQ URL from environment variable or use default
+    rabbitmq_url = os.getenv("RABBITMQ_URL", "amqp://localhost:5672")
+    
+    consumer = CandidateInvitationConsumer(rabbitmq_url)
+    
+    try:
+        consumer.connect()
+        consumer.start_consuming()
+    except Exception as e:
+        logger.error(f"Failed to start consumer: {e}")
+
+
+if __name__ == "__main__":
+    main() 

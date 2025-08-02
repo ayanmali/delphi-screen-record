@@ -41,7 +41,7 @@ export default function Sidebar() {
       unitIndex++;
     }
     
-    return `${size} ${units[unitIndex]}`;
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
   };
 
   const storagePercentage = storageStats 

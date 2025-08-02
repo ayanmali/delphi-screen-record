@@ -1,16 +1,16 @@
 from datetime import datetime
 from pydantic import BaseModel
 
-class UserBaseDto(BaseModel):
+class CandidateBaseDto(BaseModel):
     name: str
     email: str
 
 # For POST requests
-class UserCreateDto(UserBaseDto):
+class CandidateCreateDto(CandidateBaseDto):
     pass
 
 # For API responses
-class UserResponseDto(UserBaseDto):
+class CandidateResponseDto(CandidateBaseDto):
     id: int
     created_at: datetime
     
