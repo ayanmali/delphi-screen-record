@@ -11,5 +11,5 @@ vite.config.ts.*
 __pycache__
 
 .env
-package.json
-backend
+.replit
+recordings

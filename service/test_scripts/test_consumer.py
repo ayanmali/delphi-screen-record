@@ -113,7 +113,7 @@ def main():
         else:
             logger.error(f"❌ {test_name} failed")
     
-    logger.info(f"\n--- Test Results ---")
+    logger.info("\n--- Test Results ---")
     logger.info(f"Passed: {passed}/{total}")
     
     if passed == total:

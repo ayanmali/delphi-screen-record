@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.data.database import get_db_session
 from app.data.models.assessments import Assessment
-from app.data.models.users import User
+from app.data.models.candidates import Candidate
 
 logger = logging.getLogger(__name__)
 
@@ -128,16 +128,16 @@ class CandidateInvitationConsumer:
                     logger.info(f"Updated existing assessment: {message.assessment_name}")
 
                 # Check if user exists, if not create it
-                user = session.query(User).filter(User.id == message.user_id).first()
-                if not user:
-                    user = User(
+                candidate = session.query(Candidate).filter(Candidate.id == message.user_id).first()
+                if not candidate:
+                    candidate = Candidate(
                         id=message.user_id,
                         email=message.user_email,
                         created_at=datetime.utcnow(),
                         updated_at=datetime.utcnow()
                     )
-                    session.add(user)
-                    logger.info(f"Created new user: {message.user_email}")
+                    session.add(candidate)
+                    logger.info(f"Created new candidate: {message.user_email}")
 
                 session.commit()
                 logger.info(f"Database updated successfully for invitation: {message.invitation_id}")

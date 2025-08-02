@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from app.data.schemas.recordings import Recording
-from app.data.models.recordings import InsertRecordingDto, RecordingResponseDto, RecordingListResponseDto
+from app.data.models.recordings import InsertRecordingDto, RecordingResponseDto
 from fastapi import HTTPException
 from datetime import datetime
 from typing import List, Optional

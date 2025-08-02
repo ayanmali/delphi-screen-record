@@ -1,10 +1,17 @@
-from pydantic import BaseModel
 from app.data.database import Base
-from sqlalchemy import Column, DateTime, Integer, String, func, JSON
+from sqlalchemy import Column, DateTime, Integer, String, func, Text
 
-class AssessmentBase(Base):
+class Assessment(Base):
     __tablename__ = "assessments"
     
     id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False, index=True)
     title = Column(String, index=True)
-    createdAt = Column(DateTime, default=func.now())
+    description = Column(Text)
+    assessment_type = Column(String(100), nullable=False)
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    duration = Column(Integer)
+    user_id = Column(Integer, nullable=False) # The user that made the assessment, not a candidate
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

@@ -6,9 +6,12 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes.users import users_router
+from app.routes.candidates import candidates_router
 from app.routes.recordings import recordings_router
 from app.data.database import session_manager
+# Import schemas to ensure all models are loaded for table creation
+# from app.data import schemas
+
 import os
 
 load_dotenv()
@@ -50,7 +53,7 @@ async def root():
 
 
 # Routers
-app.include_router(users_router)
+app.include_router(candidates_router)
 app.include_router(recordings_router)
 
 

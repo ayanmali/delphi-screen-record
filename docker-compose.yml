@@ -1,48 +1,48 @@
-services:
-  postgres:
-    image: postgres:15
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: delphi
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+# services:
+#   postgres:
+#     image: postgres:15
+#     ports:
+#       - "5432:5432"
+#     environment:
+#       POSTGRES_USER: postgres
+#       POSTGRES_PASSWORD: postgres
+#       POSTGRES_DB: delphi
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+#   rabbitmq:
+#     image: rabbitmq:3-management
+#     ports:
+#       - "5672:5672"
+#       - "15672:15672"
+#     environment:
+#       RABBITMQ_DEFAULT_USER: guest
+#       RABBITMQ_DEFAULT_PASS: guest
+#     volumes:
+#       - rabbitmq_data:/var/lib/rabbitmq
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
-    depends_on:
-      - postgres
-      - rabbitmq
-    env_file:
-      - .env
+#   backend:
+#     build:
+#       context: ./backend
+#       dockerfile: Dockerfile
+#     ports:
+#       - "8000:8000"
+#     depends_on:
+#       - postgres
+#       - rabbitmq
+#     env_file:
+#       - .env
 
-  client:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
-    ports:
-      - "5173:5173"
-    depends_on:
-      - backend
-    env_file:
-      - .env
-volumes:
-  postgres_data:
-  rabbitmq_data:
+#   client:
+#     build:
+#       context: ./client
+#       dockerfile: Dockerfile
+#     ports:
+#       - "5173:5173"
+#     depends_on:
+#       - backend
+#     env_file:
+#       - .env
+# volumes:
+#   postgres_data:
+#   rabbitmq_data:

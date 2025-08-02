@@ -2,6 +2,14 @@ from app.data.database import Base
 from sqlalchemy import Column, DateTime, Integer, String, func, ForeignKey
 
 # Entity stored in database
+# class User(Base):
+#     __tablename__ = "users"
+    
+#     id = Column(Integer, primary_key=True, index=True)
+#     email = Column(String, unique=True, index=True)
+#     created_at = Column(DateTime, default=func.now())
+#     updated_at = Column(DateTime, default=func.now())
+
 class Candidate(Base):
     __tablename__ = "candidates"
     
@@ -9,6 +17,7 @@ class Candidate(Base):
     name = Column(String, index=True)
     email = Column(String, unique=True, index=True)
     created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 class CandidateAttempt(Base):
     __tablename__ = "candidate_attempts"

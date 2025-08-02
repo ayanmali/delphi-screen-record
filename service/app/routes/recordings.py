@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
-from app.data.schemas.recordings import Recording
 from app.data.models.recordings import InsertRecordingDto, ClientMetadataDto, RecordingResponseDto
 from app.repositories.recordings_repository import (
     create_recording,
@@ -14,15 +13,12 @@ from app.repositories.recordings_repository import (
     get_recordings_by_date_range,
     get_recordings_count
 )
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Annotated, Optional, List
+from typing import Optional, List
 from app.data.database import session_manager
 from app.dependencies import DBSessionDep
 import json
 import os
 from datetime import datetime
-
-SessionDep = DBSessionDep
 
 recordings_router = APIRouter(
     prefix="/api/recordings",
@@ -33,7 +29,7 @@ recordings_router = APIRouter(
 # Get all recordings
 @recordings_router.get("/", response_model=List[RecordingResponseDto])
 async def get_recordings(
-    session: SessionDep,
+    session: DBSessionDep,
     skip: int = 0,
     limit: int = 100,
     format: Optional[str] = None,
@@ -57,7 +53,7 @@ async def get_recordings(
 
 # Get specific recording
 @recordings_router.get("/{recording_id}", response_model=RecordingResponseDto)
-async def get_recording_by_id(session: SessionDep, recording_id: int):
+async def get_recording_by_id(session: DBSessionDep, recording_id: int):
     """
     Get a specific recording by ID
     """
@@ -71,7 +67,7 @@ async def get_recording_by_id(session: SessionDep, recording_id: int):
 # Create new recording
 @recordings_router.post("/", response_model=RecordingResponseDto)
 async def create_new_recording(
-    session: SessionDep,
+    session: DBSessionDep,
     video: UploadFile = File(...),
     metadata: str = Form(...)
 ):
@@ -123,7 +119,7 @@ async def create_new_recording(
 
 # Download recording file
 @recordings_router.get("/{recording_id}/download")
-async def download_recording(session: SessionDep, recording_id: int):
+async def download_recording(session: DBSessionDep, recording_id: int):
     """
     Download a recording file
     """
@@ -151,7 +147,7 @@ async def download_recording(session: SessionDep, recording_id: int):
 
 # Stream recording file
 @recordings_router.get("/{recording_id}/stream")
-async def stream_recording(session: SessionDep, recording_id: int):
+async def stream_recording(session: DBSessionDep, recording_id: int):
     """
     Stream a recording file
     """
@@ -179,7 +175,7 @@ async def stream_recording(session: SessionDep, recording_id: int):
 # Update recording
 @recordings_router.put("/{recording_id}", response_model=RecordingResponseDto)
 async def update_recording_by_id(
-    session: SessionDep,
+    session: DBSessionDep,
     recording_id: int,
     recording_data: dict
 ):
@@ -195,7 +191,7 @@ async def update_recording_by_id(
 
 # Delete recording
 @recordings_router.delete("/{recording_id}")
-async def delete_recording_by_id(session: SessionDep, recording_id: int):
+async def delete_recording_by_id(session: DBSessionDep, recording_id: int):
     """
     Delete a recording by ID
     """
@@ -217,7 +213,7 @@ async def delete_recording_by_id(session: SessionDep, recording_id: int):
 
 # Get storage statistics
 @recordings_router.get("/storage/stats")
-async def get_storage_stats(session: SessionDep):
+async def get_storage_stats(session: DBSessionDep):
     """
     Get storage statistics
     """
