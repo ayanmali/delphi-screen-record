@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
-from app.data.models.recordings import InsertRecordingDto, ClientMetadataDto, RecordingResponseDto
+from app.data.schemas.recordings import InsertRecordingDto, ClientMetadataDto, RecordingResponseDto
 from app.repositories.recordings_repository import (
     create_recording,
     get_recording,
@@ -10,11 +10,10 @@ from app.repositories.recordings_repository import (
     get_recordings_by_format,
     get_recordings_with_audio,
     search_recordings_by_title,
-    get_recordings_by_date_range,
+    #get_recordings_by_date_range,
     get_recordings_count
 )
 from typing import Optional, List
-from app.data.database import session_manager
 from app.dependencies import DBSessionDep
 import json
 import os
@@ -49,7 +48,7 @@ async def get_recordings(
         else:
             return await get_all_recordings(session, skip, limit)
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to fetch recordings")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch recordings: {e}")
 
 # Get specific recording
 @recordings_router.get("/{recording_id}", response_model=RecordingResponseDto)
@@ -62,7 +61,7 @@ async def get_recording_by_id(session: DBSessionDep, recording_id: int):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to fetch recording")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch recording: {e}")
 
 # Create new recording
 @recordings_router.post("/", response_model=RecordingResponseDto)
@@ -83,7 +82,7 @@ async def create_new_recording(
             recording_data = json.loads(metadata)
             validated_data = ClientMetadataDto(**recording_data)
         except (json.JSONDecodeError, ValueError) as e:
-            raise HTTPException(status_code=400, detail="Invalid metadata format")
+            raise HTTPException(status_code=400, detail=f"Invalid metadata format: {e}")
         
         # Generate unique filename
         timestamp = int(datetime.now().timestamp() * 1000)
@@ -115,7 +114,7 @@ async def create_new_recording(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to save recording")
+        raise HTTPException(status_code=500, detail=f"Failed to save recording: {e}")
 
 # Download recording file
 @recordings_router.get("/{recording_id}/download")
@@ -143,7 +142,7 @@ async def download_recording(session: DBSessionDep, recording_id: int):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to download recording")
+        raise HTTPException(status_code=500, detail=f"Failed to download recording: {e}")
 
 # Stream recording file
 @recordings_router.get("/{recording_id}/stream")
@@ -170,7 +169,7 @@ async def stream_recording(session: DBSessionDep, recording_id: int):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to stream recording")
+        raise HTTPException(status_code=500, detail=f"Failed to stream recording: {e}")
 
 # Update recording
 @recordings_router.put("/{recording_id}", response_model=RecordingResponseDto)
@@ -187,7 +186,7 @@ async def update_recording_by_id(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to update recording")
+        raise HTTPException(status_code=500, detail=f"Failed to update recording: {e}")
 
 # Delete recording
 @recordings_router.delete("/{recording_id}")
@@ -209,7 +208,7 @@ async def delete_recording_by_id(session: DBSessionDep, recording_id: int):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to delete recording")
+        raise HTTPException(status_code=500, detail=f"Failed to delete recording: {e}")
 
 # Get storage statistics
 @recordings_router.get("/storage/stats")
@@ -238,4 +237,4 @@ async def get_storage_stats(session: DBSessionDep):
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to fetch storage stats")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch storage stats: {e}")

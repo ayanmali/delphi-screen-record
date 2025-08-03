@@ -2,7 +2,7 @@ from typing import List
 from app.dependencies import DBSessionDep
 from fastapi import APIRouter, HTTPException
 from app.repositories import candidates_repository
-from app.data.models.candidates import CandidateCreateDto, CandidateResponseDto
+from app.data.schemas.candidates import CandidateCreateDto, CandidateResponseDto
 
 candidates_router = APIRouter(
     prefix="/api/candidates",

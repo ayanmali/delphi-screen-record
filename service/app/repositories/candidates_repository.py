@@ -1,10 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.data.schemas.candidates import Candidate
-from app.data.models.candidates import CandidateCreateDto
+from app.data.schemas.candidates import Candidate, CandidateCreateDto
 from fastapi import HTTPException
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 async def create_candidate(db_session: AsyncSession, candidate: CandidateCreateDto):
     db_candidate = Candidate(name=candidate.name, email=candidate.email)

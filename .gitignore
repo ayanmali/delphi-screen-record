@@ -11,5 +11,6 @@ vite.config.ts.*
 __pycache__
 
 .env
+.env.prod
 .replit
 recordings

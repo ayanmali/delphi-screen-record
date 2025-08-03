@@ -15,6 +15,8 @@ from sqlalchemy.orm import DeclarativeBase
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL is None:
+    raise Exception("DATABASE_URL is not set in the environment variables")
 
 class Base(DeclarativeBase):
     # https://docs.sqlalchemy.org/en/14/orm/extensions/asyncio.html#preventing-implicit-io-when-using-asyncsession

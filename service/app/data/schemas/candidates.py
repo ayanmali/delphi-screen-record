@@ -1,14 +1,7 @@
 from app.data.database import Base
 from sqlalchemy import Column, DateTime, Integer, String, func, ForeignKey
-
-# Entity stored in database
-# class User(Base):
-#     __tablename__ = "users"
-    
-#     id = Column(Integer, primary_key=True, index=True)
-#     email = Column(String, unique=True, index=True)
-#     created_at = Column(DateTime, default=func.now())
-#     updated_at = Column(DateTime, default=func.now())
+from datetime import datetime
+from pydantic import BaseModel
 
 class Candidate(Base):
     __tablename__ = "candidates"
@@ -19,6 +12,23 @@ class Candidate(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
+class CandidateBaseDto(BaseModel):
+    name: str
+    email: str
+
+# For POST requests
+class CandidateCreateDto(CandidateBaseDto):
+    pass
+
+# For API responses
+class CandidateResponseDto(CandidateBaseDto):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# Candidate attempts
 class CandidateAttempt(Base):
     __tablename__ = "candidate_attempts"
 

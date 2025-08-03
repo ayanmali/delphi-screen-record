@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
-from app.data.schemas.recordings import Recording
-from app.data.models.recordings import InsertRecordingDto, RecordingResponseDto
+from sqlalchemy import select #, delete
+from app.data.schemas.recordings import Recording, InsertRecordingDto, RecordingResponseDto
 from fastapi import HTTPException
 from datetime import datetime
 from typing import List, Optional
@@ -56,9 +55,9 @@ async def get_all_recordings(db_session: AsyncSession, skip: int = 0, limit: int
 
 async def update_recording(db_session: AsyncSession, recording_id: int, recording_data: dict) -> RecordingResponseDto:
     """Update a recording by ID"""
-    recording = await get_recording(db_session, recording_id)
+    # recording = await get_recording(db_session, recording_id)
     
-    # Get the actual SQLModel object for updating
+    # Get the actual database object for updating
     db_recording = (await db_session.scalars(select(Recording).where(Recording.id == recording_id))).first()
     
     for field, value in recording_data.items():

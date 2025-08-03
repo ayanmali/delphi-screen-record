@@ -9,8 +9,8 @@ import pika
 from pydantic import BaseModel
 
 from app.data.database import get_db_session
-from app.data.models.assessments import Assessment
-from app.data.models.candidates import Candidate
+from app.data.schemas.assessments import Assessment
+from app.data.schemas.candidates import Candidate
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,15 @@ RABBITMQ_URL = os.getenv("RABBITMQ_URL")
 CANDIDATE_INVITATION_QUEUE = os.getenv("CANDIDATE_INVITATION_QUEUE")
 CANDIDATE_INVITATION_EXCHANGE = os.getenv("CANDIDATE_INVITATION_EXCHANGE")
 CANDIDATE_INVITATION_ROUTING_KEY = os.getenv("CANDIDATE_INVITATION_ROUTING_KEY")
+
+if RABBITMQ_URL is None:
+    raise Exception("RABBITMQ_URL is not set in the environment variables")
+if CANDIDATE_INVITATION_QUEUE is None:
+    raise Exception("CANDIDATE_INVITATION_QUEUE is not set in the environment variables")
+if CANDIDATE_INVITATION_EXCHANGE is None:
+    raise Exception("CANDIDATE_INVITATION_EXCHANGE is not set in the environment variables")
+if CANDIDATE_INVITATION_ROUTING_KEY is None:
+    raise Exception("CANDIDATE_INVITATION_ROUTING_KEY is not set in the environment variables")
 
 class CandidateInvitationMessage(BaseModel):
     assessment_id: int
@@ -48,6 +57,7 @@ class CandidateInvitationConsumer:
     def connect(self):
         """Establish connection to RabbitMQ"""
         try:
+            # TODO: use async connection
             self.connection = pika.BlockingConnection(
                 pika.URLParameters(self.rabbitmq_url)
             )
@@ -185,6 +195,9 @@ class CandidateInvitationConsumer:
 
 def main():
     """Main function to run the consumer"""
+    if RABBITMQ_URL is None:
+        raise Exception("RABBITMQ_URL is not set in the environment variables")
+    
     consumer = CandidateInvitationConsumer(RABBITMQ_URL)
     
     try:
