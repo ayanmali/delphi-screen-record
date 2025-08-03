@@ -1,8 +1,10 @@
 import json
 import logging
 from datetime import datetime
+import os
 from typing import Optional
 
+from dotenv import load_dotenv
 import pika
 from pydantic import BaseModel
 
@@ -12,6 +14,12 @@ from app.data.models.candidates import Candidate
 
 logger = logging.getLogger(__name__)
 
+load_dotenv()
+
+RABBITMQ_URL = os.getenv("RABBITMQ_URL")
+CANDIDATE_INVITATION_QUEUE = os.getenv("CANDIDATE_INVITATION_QUEUE")
+CANDIDATE_INVITATION_EXCHANGE = os.getenv("CANDIDATE_INVITATION_EXCHANGE")
+CANDIDATE_INVITATION_ROUTING_KEY = os.getenv("CANDIDATE_INVITATION_ROUTING_KEY")
 
 class CandidateInvitationMessage(BaseModel):
     assessment_id: int
@@ -29,7 +37,7 @@ class CandidateInvitationMessage(BaseModel):
 
 
 class CandidateInvitationConsumer:
-    def __init__(self, rabbitmq_url: str = "amqp://localhost:5672"):
+    def __init__(self, rabbitmq_url: str = RABBITMQ_URL):
         self.rabbitmq_url = rabbitmq_url
         self.connection = None
         self.channel = None
@@ -177,19 +185,13 @@ class CandidateInvitationConsumer:
 
 def main():
     """Main function to run the consumer"""
-    import os
-    
-    # Get RabbitMQ URL from environment variable or use default
-    rabbitmq_url = os.getenv("RABBITMQ_URL", "amqp://localhost:5672")
-    
-    consumer = CandidateInvitationConsumer(rabbitmq_url)
+    consumer = CandidateInvitationConsumer(RABBITMQ_URL)
     
     try:
         consumer.connect()
         consumer.start_consuming()
     except Exception as e:
         logger.error(f"Failed to start consumer: {e}")
-
 
 if __name__ == "__main__":
     main() 
