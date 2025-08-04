@@ -30,6 +30,8 @@ class InsertRecordingDto(RecordingBaseDto):
     pass
 
 class ClientMetadataDto(RecordingBaseDto):
+    # TODO: add candidateAttemptId
+    # candidateAttemptId: id
     pass
 
 class RecordingOptionsDto(BaseModel):

@@ -76,10 +76,10 @@ async def create_new_recording(
     try:
         if not video:
             raise HTTPException(status_code=400, detail="No video file provided")
-        print("--------------------------------")
-        print("REQUEST RECEIVED")
-        print(f"metadata: {metadata}")
-        print("--------------------------------")
+        # print("--------------------------------")
+        # print("REQUEST RECEIVED")
+        # print(f"metadata: {metadata}")
+        # print("--------------------------------")
 
         # Parse metadata
         try:
@@ -97,25 +97,19 @@ async def create_new_recording(
         content = await video.read()
         
         # Upload to Google Cloud Storage
-        # content_type = video.content_type or "video/mp4"
-        # public_url, gcs_path = await gcs_service.upload_file(
-        #     file_content=content,
-        #     filename=unique_filename,
-        #     content_type=content_type
-        # )
         gcs_url = await gcs_service.upload_video_file(
             file_content=content,
             filename=unique_filename
         )
-        print("--------------------------------")
-        print(f"Video uploaded successfully: {gcs_url}")
-        print("--------------------------------")
+        # print("--------------------------------")
+        # print(f"Video uploaded successfully: {gcs_url}")
+        # print("--------------------------------")
         
-        # Get a signed URL for accessing the video
-        signed_url = gcs_service.get_signed_url(unique_filename, expiration_minutes=120)
-        print("--------------------------------")
-        print(f"Signed URL: {signed_url}")
-        print("--------------------------------")
+        # # Get a signed URL for accessing the video
+        # signed_url = gcs_service.get_signed_url(unique_filename, expiration_minutes=120)
+        # print("--------------------------------")
+        # print(f"Signed URL: {signed_url}")
+        # print("--------------------------------")
         
         # Create recording record
         recording_dto = InsertRecordingDto(
@@ -136,8 +130,8 @@ async def create_new_recording(
         raise HTTPException(status_code=500, detail=f"Failed to save recording: {e}")
 
 # Download recording file
-@recordings_router.get("/{recording_id}/download")
-async def download_recording(
+@recordings_router.get("/{recording_id}/url")
+async def get_file_url(
     session: DBSessionDep, 
     gcs_service: GCSServiceDep,
     recording_id: int
@@ -169,14 +163,49 @@ async def download_recording(
         raise HTTPException(status_code=500, detail=f"Failed to get download URL: {e}")
 
 # Stream recording file
-@recordings_router.get("/{recording_id}/stream")
-async def stream_recording(
-    session: DBSessionDep, 
+# @recordings_router.get("/{recording_id}/stream")
+# async def stream_recording(
+#     session: DBSessionDep, 
+#     gcs_service: GCSServiceDep,
+#     recording_id: int
+# ):
+#     """
+#     Get streaming URL for a recording file from Google Cloud Storage
+#     """
+#     try:
+#         recording = await get_recording(session, recording_id)
+        
+#         if not recording.filename:
+#             raise HTTPException(status_code=404, detail="Recording file not found")
+        
+#         # Get the public URL from GCS for streaming
+#         stream_url = await gcs_service.get_file_url(recording.filename)
+        
+#         if not stream_url:
+#             raise HTTPException(status_code=404, detail="Recording file not found in cloud storage")
+        
+#         return {
+#             "stream_url": stream_url,
+#             "filename": recording.title,
+#             "format": recording.format,
+#             "content_type": f"video/{recording.format}"
+#         }
+        
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Failed to get stream URL: {e}")
+
+# Get signed URL for secure access
+@recordings_router.get("/{recording_id}/signed-url")
+async def get_signed_url(
+    session: DBSessionDep,
     gcs_service: GCSServiceDep,
-    recording_id: int
+    recording_id: int,
+    expiration_minutes: int = 60
 ):
     """
-    Get streaming URL for a recording file from Google Cloud Storage
+    Get a signed URL for secure access to a recording file
     """
     try:
         recording = await get_recording(session, recording_id)
@@ -184,25 +213,28 @@ async def stream_recording(
         if not recording.filename:
             raise HTTPException(status_code=404, detail="Recording file not found")
         
-        # Get the public URL from GCS for streaming
-        stream_url = await gcs_service.get_file_url(recording.filename)
+        # Generate signed URL
+        signed_url = gcs_service.get_signed_url(
+            filename=recording.filename,
+            expiration_minutes=expiration_minutes
+        )
         
-        if not stream_url:
+        if not signed_url:
             raise HTTPException(status_code=404, detail="Recording file not found in cloud storage")
         
         return {
-            "stream_url": stream_url,
+            "signed_url": signed_url,
+            "expires_in_minutes": expiration_minutes,
             "filename": recording.title,
-            "format": recording.format,
-            "content_type": f"video/{recording.format}"
+            "format": recording.format
         }
         
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get stream URL: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate signed URL: {e}")
 
-# Update recording
+# Update recording in the DB
 @recordings_router.put("/{recording_id}", response_model=RecordingResponseDto)
 async def update_recording_by_id(
     session: DBSessionDep,
@@ -244,44 +276,6 @@ async def delete_recording_by_id(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete recording: {e}")
-
-# Get signed URL for secure access
-@recordings_router.get("/{recording_id}/signed-url")
-async def get_signed_url(
-    session: DBSessionDep,
-    gcs_service: GCSServiceDep,
-    recording_id: int,
-    expiration_minutes: int = 60
-):
-    """
-    Get a signed URL for secure access to a recording file
-    """
-    try:
-        recording = await get_recording(session, recording_id)
-        
-        if not recording.filename:
-            raise HTTPException(status_code=404, detail="Recording file not found")
-        
-        # Generate signed URL
-        signed_url = await gcs_service.generate_signed_url(
-            filename=recording.filename,
-            expiration_minutes=expiration_minutes
-        )
-        
-        if not signed_url:
-            raise HTTPException(status_code=404, detail="Recording file not found in cloud storage")
-        
-        return {
-            "signed_url": signed_url,
-            "expires_in_minutes": expiration_minutes,
-            "filename": recording.title,
-            "format": recording.format
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate signed URL: {e}")
 
 # Get storage statistics
 @recordings_router.get("/storage/stats")
