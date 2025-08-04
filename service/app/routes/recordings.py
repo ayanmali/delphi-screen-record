@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
-from fastapi.responses import StreamingResponse
 from app.data.schemas.recordings import InsertRecordingDto, ClientMetadataDto, RecordingResponseDto
 from app.repositories.recordings_repository import (
     create_recording,
@@ -77,7 +76,11 @@ async def create_new_recording(
     try:
         if not video:
             raise HTTPException(status_code=400, detail="No video file provided")
-        
+        print("--------------------------------")
+        print("REQUEST RECEIVED")
+        print(f"metadata: {metadata}")
+        print("--------------------------------")
+
         # Parse metadata
         try:
             recording_data = json.loads(metadata)
@@ -94,12 +97,25 @@ async def create_new_recording(
         content = await video.read()
         
         # Upload to Google Cloud Storage
-        content_type = video.content_type or "video/mp4"
-        public_url, gcs_path = await gcs_service.upload_file(
+        # content_type = video.content_type or "video/mp4"
+        # public_url, gcs_path = await gcs_service.upload_file(
+        #     file_content=content,
+        #     filename=unique_filename,
+        #     content_type=content_type
+        # )
+        gcs_url = await gcs_service.upload_video_file(
             file_content=content,
-            filename=unique_filename,
-            content_type=content_type
+            filename=unique_filename
         )
+        print("--------------------------------")
+        print(f"Video uploaded successfully: {gcs_url}")
+        print("--------------------------------")
+        
+        # Get a signed URL for accessing the video
+        signed_url = gcs_service.get_signed_url(unique_filename, expiration_minutes=120)
+        print("--------------------------------")
+        print(f"Signed URL: {signed_url}")
+        print("--------------------------------")
         
         # Create recording record
         recording_dto = InsertRecordingDto(

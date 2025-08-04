@@ -1,7 +1,7 @@
+import mimetypes
 import os
 import logging
-from typing import Optional, Tuple
-from datetime import datetime, timedelta
+from typing import Optional
 from google.cloud import storage
 from google.cloud.exceptions import GoogleCloudError
 from fastapi import HTTPException
@@ -39,50 +39,150 @@ class GoogleCloudStorageService:
                 detail="Failed to initialize cloud storage service"
             )
     
-    async def upload_file(
-        self, 
-        file_content: bytes, 
-        filename: str, 
-        content_type: Optional[str] = None,
-        make_public: bool = True
-    ) -> Tuple[str, str]:
+    # async def upload_file(
+    #     self, 
+    #     file_content: bytes, 
+    #     filename: str, 
+    #     content_type: Optional[str] = None,
+    #     make_public: bool = True
+    # ) -> Tuple[str, str]:
+    #     """
+    #     Upload a file to Google Cloud Storage
+        
+    #     Args:
+    #         file_content: The file content as bytes
+    #         filename: The name to give the file in GCS
+    #         content_type: Optional content type for the file
+    #         make_public: Whether to make the file publicly accessible
+            
+    #     Returns:
+    #         Tuple of (public_url, gcs_path)
+    #     """
+    #     try:
+    #         # Create blob
+    #         blob = self.bucket.blob(filename)
+            
+    #         # Set content type if provided
+    #         if content_type:
+    #             blob.content_type = content_type
+            
+    #         # Upload the file
+    #         blob.upload_from_string(
+    #             file_content,
+    #             content_type=content_type or 'application/octet-stream'
+    #         )
+            
+    #         # Make the blob publicly readable if requested
+    #         if make_public:
+    #             # When uniform bucket-level access is enabled, we can't use make_public()
+    #             # Instead, we'll construct the public URL manually
+    #             public_url = f"https://storage.googleapis.com/{self.bucket_name}/{filename}"
+    #         else:
+    #             public_url = None
+                
+    #         gcs_path = f"gs://{self.bucket_name}/{filename}"
+            
+    #         logger.info(f"Successfully uploaded {filename} to GCS")
+    #         return public_url, gcs_path
+            
+    #     except GoogleCloudError as e:
+    #         logger.error(f"Google Cloud Storage error uploading {filename}: {e}")
+    #         raise HTTPException(
+    #             status_code=500,
+    #             detail=f"Failed to upload file to cloud storage: {str(e)}"
+    #         )
+    #     except Exception as e:
+    #         logger.error(f"Unexpected error uploading {filename}: {e}")
+    #         raise HTTPException(
+    #             status_code=500,
+    #             detail=f"Failed to upload file: {str(e)}"
+    #         )
+    
+    # async def generate_signed_url(
+    #     self, 
+    #     filename: str, 
+    #     expiration_minutes: int = 60,
+    #     method: str = "GET"
+    # ) -> Optional[str]:
+    #     """
+    #     Generate a signed URL for secure access to a file
+        
+    #     Args:
+    #         filename: The name of the file
+    #         expiration_minutes: How long the URL should be valid (default: 60 minutes)
+    #         method: HTTP method allowed (GET, PUT, DELETE, etc.)
+            
+    #     Returns:
+    #         Signed URL if successful, None otherwise
+    #     """
+    #     try:
+    #         blob = self.bucket.blob(filename)
+            
+    #         if not blob.exists():
+    #             logger.warning(f"File {filename} does not exist in GCS")
+    #             return None
+            
+    #         # Generate signed URL
+    #         expiration = datetime.now() + timedelta(minutes=expiration_minutes)
+    #         signed_url = blob.generate_signed_url(
+    #             version="v4",
+    #             expiration=expiration,
+    #             method=method
+    #         )
+            
+    #         logger.info(f"Generated signed URL for {filename} (expires in {expiration_minutes} minutes)")
+    #         return signed_url
+            
+    #     except GoogleCloudError as e:
+    #         logger.error(f"Google Cloud Storage error generating signed URL for {filename}: {e}")
+    #         return None
+    #     except Exception as e:
+    #         logger.error(f"Unexpected error generating signed URL for {filename}: {e}")
+    #         return None
+
+    async def upload_file(self, file_content: bytes, filename: str, content_type: Optional[str] = None) -> str:
         """
-        Upload a file to Google Cloud Storage
+        Upload a file to Google Cloud Storage bucket
         
         Args:
             file_content: The file content as bytes
-            filename: The name to give the file in GCS
-            content_type: Optional content type for the file
-            make_public: Whether to make the file publicly accessible
+            filename: The name of the file to store in GCS
+            content_type: Optional content type. If not provided, will be auto-detected
             
         Returns:
-            Tuple of (public_url, gcs_path)
+            str: The public URL of the uploaded file
+            
+        Raises:
+            HTTPException: If upload fails
         """
         try:
-            # Create blob
+            # Auto-detect content type if not provided
+            if not content_type:
+                content_type, _ = mimetypes.guess_type(filename)
+                if not content_type:
+                    # Default to application/octet-stream for unknown types
+                    content_type = "application/octet-stream"
+            
+            # Create a blob object
             blob = self.bucket.blob(filename)
             
-            # Set content type if provided
-            if content_type:
-                blob.content_type = content_type
+            # Set content type
+            blob.content_type = content_type
             
-            # Upload the file
+            # Upload the file content
             blob.upload_from_string(
                 file_content,
-                content_type=content_type or 'application/octet-stream'
+                content_type=content_type,
+                timeout=300  # 5 minutes timeout for large video files
             )
             
-            # Make the blob publicly readable if requested
-            if make_public:
-                blob.make_public()
-                public_url = blob.public_url
-            else:
-                public_url = None
-                
-            gcs_path = f"gs://{self.bucket_name}/{filename}"
+            # Make the blob publicly readable (optional - remove if you want private files)
+            # blob.make_public()
             
-            logger.info(f"Successfully uploaded {filename} to GCS")
-            return public_url, gcs_path
+            logger.info(f"Successfully uploaded {filename} to bucket {self.bucket_name}")
+            
+            # Return the public URL or signed URL
+            return f"gs://{self.bucket_name}/{filename}"
             
         except GoogleCloudError as e:
             logger.error(f"Google Cloud Storage error uploading {filename}: {e}")
@@ -94,50 +194,66 @@ class GoogleCloudStorageService:
             logger.error(f"Unexpected error uploading {filename}: {e}")
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to upload file: {str(e)}"
+                detail="An unexpected error occurred during file upload"
             )
     
-    async def generate_signed_url(
-        self, 
-        filename: str, 
-        expiration_minutes: int = 60,
-        method: str = "GET"
-    ) -> Optional[str]:
+    async def upload_video_file(self, file_content: bytes, filename: str) -> str:
         """
-        Generate a signed URL for secure access to a file
+        Specialized method for uploading video files with appropriate settings
         
         Args:
-            filename: The name of the file
-            expiration_minutes: How long the URL should be valid (default: 60 minutes)
-            method: HTTP method allowed (GET, PUT, DELETE, etc.)
+            file_content: The video file content as bytes
+            filename: The name of the video file
             
         Returns:
-            Signed URL if successful, None otherwise
+            str: The GCS URL of the uploaded video
+        """
+        # Common video MIME types
+        video_extensions = {
+            '.mp4': 'video/mp4',
+            '.avi': 'video/x-msvideo',
+            '.mov': 'video/quicktime',
+            '.wmv': 'video/x-ms-wmv',
+            '.flv': 'video/x-flv',
+            '.webm': 'video/webm',
+            '.mkv': 'video/x-matroska',
+            '.m4v': 'video/x-m4v'
+        }
+        
+        # Get file extension
+        file_ext = os.path.splitext(filename.lower())[1]
+        content_type = video_extensions.get(file_ext, 'video/mp4')
+        
+        return await self.upload_file(file_content, filename, content_type)
+    
+    def get_signed_url(self, filename: str, expiration_minutes: int = 60) -> str:
+        """
+        Generate a signed URL for accessing a private file
+        
+        Args:
+            filename: Name of the file in the bucket
+            expiration_minutes: URL expiration time in minutes
+            
+        Returns:
+            str: Signed URL for the file
         """
         try:
             blob = self.bucket.blob(filename)
             
-            if not blob.exists():
-                logger.warning(f"File {filename} does not exist in GCS")
-                return None
-            
             # Generate signed URL
-            expiration = datetime.now() + timedelta(minutes=expiration_minutes)
-            signed_url = blob.generate_signed_url(
-                version="v4",
-                expiration=expiration,
-                method=method
+            url = blob.generate_signed_url(
+                expiration=expiration_minutes * 60,  # Convert to seconds
+                method='GET'
             )
             
-            logger.info(f"Generated signed URL for {filename} (expires in {expiration_minutes} minutes)")
-            return signed_url
+            return url
             
-        except GoogleCloudError as e:
-            logger.error(f"Google Cloud Storage error generating signed URL for {filename}: {e}")
-            return None
         except Exception as e:
-            logger.error(f"Unexpected error generating signed URL for {filename}: {e}")
-            return None
+            logger.error(f"Error generating signed URL for {filename}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate access URL"
+            )
     
     async def delete_file(self, filename: str) -> bool:
         """
@@ -181,7 +297,8 @@ class GoogleCloudStorageService:
             blob = self.bucket.blob(filename)
             
             if blob.exists():
-                return blob.public_url
+                # When uniform bucket-level access is enabled, construct URL manually
+                return f"https://storage.googleapis.com/{self.bucket_name}/{filename}"
             else:
                 return None
                 
