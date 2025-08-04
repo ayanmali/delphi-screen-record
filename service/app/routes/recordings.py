@@ -14,7 +14,7 @@ from app.repositories.recordings_repository import (
     get_recordings_count
 )
 from typing import Optional, List
-from app.dependencies import DBSessionDep
+from app.dependencies import DBSessionDep, GCSServiceDep
 import json
 import os
 from datetime import datetime
@@ -67,11 +67,12 @@ async def get_recording_by_id(session: DBSessionDep, recording_id: int):
 @recordings_router.post("/", response_model=RecordingResponseDto)
 async def create_new_recording(
     session: DBSessionDep,
+    gcs_service: GCSServiceDep,
     video: UploadFile = File(...),
     metadata: str = Form(...)
 ):
     """
-    Create a new recording with video file upload
+    Create a new recording with video file upload to Google Cloud Storage
     """
     try:
         if not video:
@@ -87,16 +88,18 @@ async def create_new_recording(
         # Generate unique filename
         timestamp = int(datetime.now().timestamp() * 1000)
         file_extension = os.path.splitext(video.filename)[1] if video.filename else ".mp4"
-        unique_filename = f"recording_{timestamp}{file_extension}"
+        unique_filename = f"recordings/recording_{timestamp}{file_extension}"
         
-        # Save file to disk (you might want to implement proper file storage)
-        recordings_dir = "recordings"
-        os.makedirs(recordings_dir, exist_ok=True)
-        file_path = os.path.join(recordings_dir, unique_filename)
+        # Read video content
+        content = await video.read()
         
-        with open(file_path, "wb") as buffer:
-            content = await video.read()
-            buffer.write(content)
+        # Upload to Google Cloud Storage
+        content_type = video.content_type or "video/mp4"
+        public_url, gcs_path = await gcs_service.upload_file(
+            file_content=content,
+            filename=unique_filename,
+            content_type=content_type
+        )
         
         # Create recording record
         recording_dto = InsertRecordingDto(
@@ -118,58 +121,70 @@ async def create_new_recording(
 
 # Download recording file
 @recordings_router.get("/{recording_id}/download")
-async def download_recording(session: DBSessionDep, recording_id: int):
+async def download_recording(
+    session: DBSessionDep, 
+    gcs_service: GCSServiceDep,
+    recording_id: int
+):
     """
-    Download a recording file
+    Get download URL for a recording file from Google Cloud Storage
     """
     try:
         recording = await get_recording(session, recording_id)
         
-        file_path = os.path.join("recordings", recording.filename)
-        if not os.path.exists(file_path):
+        if not recording.filename:
             raise HTTPException(status_code=404, detail="Recording file not found")
         
-        def iterfile():
-            with open(file_path, "rb") as file:
-                yield from file
+        # Get the public URL from GCS
+        download_url = await gcs_service.get_file_url(recording.filename)
         
-        return StreamingResponse(
-            iterfile(),
-            media_type=f"video/{recording.format}",
-            headers={"Content-Disposition": f'attachment; filename="{recording.title}.{recording.format}"'}
-        )
+        if not download_url:
+            raise HTTPException(status_code=404, detail="Recording file not found in cloud storage")
+        
+        return {
+            "download_url": download_url,
+            "filename": recording.title,
+            "format": recording.format
+        }
         
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to download recording: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get download URL: {e}")
 
 # Stream recording file
 @recordings_router.get("/{recording_id}/stream")
-async def stream_recording(session: DBSessionDep, recording_id: int):
+async def stream_recording(
+    session: DBSessionDep, 
+    gcs_service: GCSServiceDep,
+    recording_id: int
+):
     """
-    Stream a recording file
+    Get streaming URL for a recording file from Google Cloud Storage
     """
     try:
         recording = await get_recording(session, recording_id)
         
-        file_path = os.path.join("recordings", recording.filename)
-        if not os.path.exists(file_path):
+        if not recording.filename:
             raise HTTPException(status_code=404, detail="Recording file not found")
         
-        def iterfile():
-            with open(file_path, "rb") as file:
-                yield from file
+        # Get the public URL from GCS for streaming
+        stream_url = await gcs_service.get_file_url(recording.filename)
         
-        return StreamingResponse(
-            iterfile(),
-            media_type=f"video/{recording.format}"
-        )
+        if not stream_url:
+            raise HTTPException(status_code=404, detail="Recording file not found in cloud storage")
+        
+        return {
+            "stream_url": stream_url,
+            "filename": recording.title,
+            "format": recording.format,
+            "content_type": f"video/{recording.format}"
+        }
         
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to stream recording: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get stream URL: {e}")
 
 # Update recording
 @recordings_router.put("/{recording_id}", response_model=RecordingResponseDto)
@@ -190,18 +205,22 @@ async def update_recording_by_id(
 
 # Delete recording
 @recordings_router.delete("/{recording_id}")
-async def delete_recording_by_id(session: DBSessionDep, recording_id: int):
+async def delete_recording_by_id(
+    session: DBSessionDep, 
+    gcs_service: GCSServiceDep,
+    recording_id: int
+):
     """
-    Delete a recording by ID
+    Delete a recording by ID from both database and Google Cloud Storage
     """
     try:
         recording = await get_recording(session, recording_id)
         
-        # Delete file from disk
-        file_path = os.path.join("recordings", recording.filename)
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        # Delete file from Google Cloud Storage
+        if recording.filename:
+            await gcs_service.delete_file(recording.filename)
         
+        # Delete from database
         await delete_recording(session, recording_id)
         return {"message": "Recording deleted successfully"}
         
@@ -209,6 +228,44 @@ async def delete_recording_by_id(session: DBSessionDep, recording_id: int):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete recording: {e}")
+
+# Get signed URL for secure access
+@recordings_router.get("/{recording_id}/signed-url")
+async def get_signed_url(
+    session: DBSessionDep,
+    gcs_service: GCSServiceDep,
+    recording_id: int,
+    expiration_minutes: int = 60
+):
+    """
+    Get a signed URL for secure access to a recording file
+    """
+    try:
+        recording = await get_recording(session, recording_id)
+        
+        if not recording.filename:
+            raise HTTPException(status_code=404, detail="Recording file not found")
+        
+        # Generate signed URL
+        signed_url = await gcs_service.generate_signed_url(
+            filename=recording.filename,
+            expiration_minutes=expiration_minutes
+        )
+        
+        if not signed_url:
+            raise HTTPException(status_code=404, detail="Recording file not found in cloud storage")
+        
+        return {
+            "signed_url": signed_url,
+            "expires_in_minutes": expiration_minutes,
+            "filename": recording.title,
+            "format": recording.format
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate signed URL: {e}")
 
 # Get storage statistics
 @recordings_router.get("/storage/stats")
