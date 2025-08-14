@@ -16,7 +16,7 @@ This guide will help you set up Google Cloud Storage for video uploads in the De
 2. Select your project
 3. Navigate to **Cloud Storage** > **Buckets**
 4. Click **Create Bucket**
-5. Choose a unique bucket name (e.g., `delphi-screen-recordings`)
+5. Choose a unique bucket name (e.g., `themus-screen-recordings`)
 6. Configure the bucket settings:
    - **Location**: Choose a region close to your users
    - **Storage class**: Standard (recommended for videos)
@@ -27,7 +27,7 @@ This guide will help you set up Google Cloud Storage for video uploads in the De
 
 1. In the Google Cloud Console, go to **IAM & Admin** > **Service Accounts**
 2. Click **Create Service Account**
-3. Give it a name (e.g., `delphi-screen-record-service`)
+3. Give it a name (e.g., `themus-screen-record-service`)
 4. Add a description (e.g., "Service account for Delphi screen recording uploads")
 5. Click **Create and Continue**
 
